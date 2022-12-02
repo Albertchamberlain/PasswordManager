@@ -719,21 +719,12 @@ func buildCharacterSet(config *Config) string {
 	var characterSet string
 	if config.IncludeLowercaseLetters {
 		characterSet += DefaultLetterSet
-		// if config.ExcludeSimilarCharacters {
-		// 	characterSet = removeCharacters(characterSet, DefaultLetterAmbiguousSet)
-		// }
 	}
 	if config.IncludeUppercaseLetters {
 		characterSet += strings.ToUpper(DefaultLetterSet)
-		// if config.ExcludeSimilarCharacters {
-		// 	characterSet = removeCharacters(characterSet, strings.ToUpper(DefaultLetterAmbiguousSet))
-		// }
 	}
 	if config.IncludeNumbers {
 		characterSet += DefaultNumberSet
-		// if config.ExcludeSimilarCharacters {
-		// 	characterSet = removeCharacters(characterSet, DefaultNumberAmbiguousSet)
-		// }
 	}
 	if config.IncludeSymbols {
 		characterSet += DefaultSymbolSet
@@ -744,14 +735,14 @@ func buildCharacterSet(config *Config) string {
 	return characterSet
 }
 
-func removeCharacters(str, characters string) string {
-	return strings.Map(func(r rune) rune {
-		if !strings.ContainsRune(characters, r) {
-			return r
-		}
-		return -1
-	}, str)
-}
+// func removeCharacters(str, characters string) string {
+// 	return strings.Map(func(r rune) rune {
+// 		if !strings.ContainsRune(characters, r) {
+// 			return r
+// 		}
+// 		return -1
+// 	}, str)
+// }
 
 func NewWithDefault() (*Generator, error) {
 	return New(&DefaultConfig)

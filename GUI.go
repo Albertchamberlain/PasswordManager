@@ -188,7 +188,6 @@ func makeNumbersPage() ui.Control {
 
 	discardButton := ui.NewButton("弃用密码")
 	discardButton.OnClicked(func(*ui.Button) {
-		//点击了按钮干什么
 		urldiscard := urlsearchEntryDiscard.Text()
 		usernamediscard := usernamesearchEntryDisacrd.Text()
 		if sure == 0 {
@@ -197,7 +196,7 @@ func makeNumbersPage() ui.Control {
 			if isdicard {
 				vbox.Append(ui.NewLabel("密码弃用成功!"), false)
 			} else {
-				vbox.Append(ui.NewLabel("你要输入的密码不存在,可能其已经被弃用!"), false)
+				vbox.Append(ui.NewLabel("你要弃用的密码不存在,可能其已经被弃用!"), false)
 			}
 		} else {
 			vbox.Append(ui.NewLabel("请确认你的操作!"), false)

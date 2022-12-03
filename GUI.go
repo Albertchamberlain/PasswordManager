@@ -16,7 +16,9 @@ import (
 
 	"github.com/andlabs/ui"
 	_ "github.com/andlabs/ui/winmanifest"
+	"github.com/atotto/clipboard"
 	"github.com/syndtr/goleveldb/leveldb"
+	"gopkg.in/toast.v1"
 )
 
 var mainwin *ui.Window
@@ -151,6 +153,23 @@ func makeNumbersPage() ui.Control {
 		passResEntry.SetText(password)
 		entryForm.Append("", passLable, false)
 		entryForm.Append("", passResEntry, false)
+		notification := toast.Notification{
+			AppID:   "Password Manager",
+			Title:   "Your Password",
+			Message: "Your Password is: " + "**********",
+			Icon:    "D:\\toast\\gopher.png", // This file must exist (remove this line if it doesn't)
+			Actions: []toast.Action{
+				{Type: "protocol", Label: "Copy the Password", Arguments: ""},
+				{Type: "protocol", Label: "Later", Arguments: ""},
+			},
+			Duration: toast.Long,
+		}
+		err := notification.Push()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// 复制内容到剪切板
+		clipboard.WriteAll(password)
 		fmt.Println("got it!") //拿到了slider的值
 	})
 	vbox.Append(find, false)

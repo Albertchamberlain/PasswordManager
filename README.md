@@ -4,11 +4,14 @@
 感谢以下开源库
 1. "github.com/andlabs/ui"
 2. "github.com/syndtr/goleveldb/leveldb"
+3. "gopkg.in/toast.v1"
+4. "github.com/atotto/clipboard"
 
 ![image](https://user-images.githubusercontent.com/47343901/205073399-66f68628-4cf2-42a6-8ad7-c05f84145011.png)
 
 
 ![image](https://user-images.githubusercontent.com/47343901/205073447-525120dd-6f55-40be-9c7f-523a9c8c1312.png)
+
 
 
 ## 代码执行流程
@@ -32,3 +35,10 @@
 
 `Step  1，2，3     如果检测到已经存在公私钥就不再生成`
 
+
+
+- [x] 用户自定义规则生成密码
+- [x] 查找密码
+- [x] Win弹窗通知密码生成
+- [x] 密码写入剪切板，可直接ctrl-v粘贴
+- [ ] soon。。。。

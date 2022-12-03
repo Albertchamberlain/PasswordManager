@@ -831,9 +831,14 @@ func PathExists(path string) (bool, error) {
 // ******************************************RSAFile********************************************
 func GenerateKeyFile(bits int) error {
 	//判断公私钥文件是否存在
+	err := os.Mkdir("./myRSA", os.ModePerm)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	existPublic, _ := PathExists("public.pem")
 	existPrivate, _ := PathExists("private.pem")
-	if !existPublic && !existPrivate {
+	if existPublic && existPrivate {
 		return errors.New("公私钥文件已存在")
 	}
 	//生成私钥

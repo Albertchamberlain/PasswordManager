@@ -102,7 +102,6 @@ func makeBasicControlsPage() ui.Control {
 
 	submit := ui.NewButton("生成密码")
 	submit.OnClicked(func(*ui.Button) {
-		//点击了按钮干什么
 		slidervalue := slider.Value()
 		websiteValue := website.Text()
 		usernameOrEmailValue := usernameOrEmail.Text()
@@ -169,7 +168,10 @@ func makeNumbersPage() ui.Control {
 			log.Fatalln(err)
 		}
 		// 复制内容到剪切板
-		clipboard.WriteAll(password)
+		errClipboard := clipboard.WriteAll(password)
+		if errClipboard != nil {
+			return
+		}
 		fmt.Println("got it!") //拿到了slider的值
 	})
 	vbox.Append(find, false)
@@ -251,7 +253,7 @@ func setupUI() {
 
 var DB *leveldb.DB
 
-// 截取时间戳后8位作为文件
+// TimeStamp 截取时间戳后8位作为文件名
 var TimeStamp string
 var (
 	PRIVATEFILE string
@@ -265,22 +267,42 @@ func SetDirAndFileName() {
 }
 
 func main() {
-	SetDirAndFileName() //初始化公钥私钥存放的文件夹
+	SetDirAndFileName() //初始化公钥私钥文件名
 	fmt.Println("TimeStamp:", TimeStamp)
 	//var err error
 	// bits, err := strconv.Atoi(TimeStamp)
 	// if err != nil {
 	// 	panic(err)
 	// }
-	GenerateKeyFile(4096) //生成公钥私钥
+	//判断公私钥文件是否存在
+	err := os.Mkdir("./myRSA", os.ModePerm)
+	if err == nil {
+		fmt.Println(err)
+		errGenerateKeyFile := GenerateKeyFile(4096)
+		if errGenerateKeyFile != nil {
+			fmt.Println(errGenerateKeyFile)
+			panic(errGenerateKeyFile)
+		}
+		//return err
+	}
+
+	//生成公钥私钥
 	var err2 error
 	DB, err2 = leveldb.OpenFile("db", nil)
 	if err2 != nil {
 		fmt.Println("levelDB打开失败, err:", err2)
 		panic(err2)
 	}
-	defer DB.Close()
-	ui.Main(setupUI)
+	defer func(DB *leveldb.DB) {
+		err := DB.Close()
+		if err != nil {
+
+		}
+	}(DB)
+	errUiMain := ui.Main(setupUI)
+	if errUiMain != nil {
+		return
+	}
 }
 
 // Service.go
@@ -292,22 +314,22 @@ func mergeTwoString(a, b string) string {
 func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue int) string {
 	//0001
 	if isInLower == 0 && isInUpper == 0 && isInNumber == 0 && isInSpecial == 1 {
-		excludeSpecialgenerater, err := New(&ExcludeSymbolsConfig)
+		excludeSpecialGenerator, err := New(&ExcludeSymbolsConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeSpecial, err2 := excludeSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeSpecial, err2 := excludeSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
 		return passwordByExcludeSpecial
 	}
 	if isInLower == 0 && isInUpper == 0 && isInNumber == 1 && isInSpecial == 0 {
-		excludeNumbergenerater, err := New(&ExcludeNumbersConfig)
+		excludeNumberGenerator, err := New(&ExcludeNumbersConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeNumber, err2 := excludeNumbergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeNumber, err2 := excludeNumberGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -315,11 +337,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//0011
 	if isInLower == 0 && isInUpper == 0 && isInNumber == 1 && isInSpecial == 1 {
-		excludeNumberAndSpecialgenerater, err := New(&ExcludeSymbolsNumbersConfig)
+		excludeNumberAndSpecialGenerator, err := New(&ExcludeSymbolsNumbersConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeNumberAndSpecial, err2 := excludeNumberAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeNumberAndSpecial, err2 := excludeNumberAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -327,11 +349,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//0100
 	if isInLower == 0 && isInUpper == 1 && isInNumber == 0 && isInSpecial == 0 {
-		excludeUppergenerater, err := New(&ExcludeUppercaseConfig)
+		excludeUpperGenerator, err := New(&ExcludeUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeUpper, err2 := excludeUppergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeUpper, err2 := excludeUpperGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -339,11 +361,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//0101
 	if isInLower == 0 && isInUpper == 1 && isInNumber == 0 && isInSpecial == 1 {
-		excludeUpperAndSpecialgenerater, err := New(&ExcludeSymbolsUppercaseConfig)
+		excludeUpperAndSpecialGenerator, err := New(&ExcludeSymbolsUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeUpperAndSpecial, err2 := excludeUpperAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeUpperAndSpecial, err2 := excludeUpperAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -351,11 +373,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//0110
 	if isInLower == 0 && isInUpper == 1 && isInNumber == 1 && isInSpecial == 0 {
-		excludeUpperAndNumbergenerater, err := New(&ExcludeNumbersUppercaseConfig)
+		excludeUpperAndNumberGenerator, err := New(&ExcludeNumbersUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeUpperAndNumber, err2 := excludeUpperAndNumbergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeUpperAndNumber, err2 := excludeUpperAndNumberGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -363,11 +385,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//0111
 	if isInLower == 0 && isInUpper == 1 && isInNumber == 1 && isInSpecial == 1 {
-		excludeUpperAndNumberAndSpecialgenerater, err := New(&ExcludeSymbolsNumbersUppercaseConfig)
+		excludeUpperAndNumberAndSpecialGenerator, err := New(&ExcludeSymbolsNumbersUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeUpperAndNumberAndSpecial, err2 := excludeUpperAndNumberAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeUpperAndNumberAndSpecial, err2 := excludeUpperAndNumberAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -375,11 +397,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1000
 	if isInLower == 1 && isInUpper == 0 && isInNumber == 0 && isInSpecial == 0 {
-		excludeLowergenerater, err := New(&ExcludeLowercaseConfig)
+		excludeLowerGenerator, err := New(&ExcludeLowercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLower, err2 := excludeLowergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLower, err2 := excludeLowerGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -387,11 +409,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1001
 	if isInLower == 1 && isInUpper == 0 && isInNumber == 0 && isInSpecial == 1 {
-		excludeLowerAndSpecialgenerater, err := New(&ExcludeSymbolsLowercaseConfig)
+		excludeLowerAndSpecialGenerator, err := New(&ExcludeSymbolsLowercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndSpecial, err2 := excludeLowerAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndSpecial, err2 := excludeLowerAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -399,11 +421,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1010
 	if isInLower == 1 && isInUpper == 0 && isInNumber == 1 && isInSpecial == 0 {
-		excludeLowerAndNumbergenerater, err := New(&ExcludeNumbersLowercaseConfig)
+		excludeLowerAndNumberGenerator, err := New(&ExcludeNumbersLowercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndNumber, err2 := excludeLowerAndNumbergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndNumber, err2 := excludeLowerAndNumberGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -411,11 +433,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1011
 	if isInLower == 1 && isInUpper == 0 && isInNumber == 1 && isInSpecial == 1 {
-		excludeLowerAndNumberAndSpecialgenerater, err := New(&ExcludeSymbolsNumbersLowercaseConfig)
+		excludeLowerAndNumberAndSpecialGenerator, err := New(&ExcludeSymbolsNumbersLowercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndNumberAndSpecial, err2 := excludeLowerAndNumberAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndNumberAndSpecial, err2 := excludeLowerAndNumberAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -423,11 +445,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1100
 	if isInLower == 1 && isInUpper == 1 && isInNumber == 0 && isInSpecial == 0 {
-		excludeLowerAndUppergenerater, err := New(&ExcludeLowercaseUppercaseConfig)
+		excludeLowerAndUpperGenerator, err := New(&ExcludeLowercaseUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndUpper, err2 := excludeLowerAndUppergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndUpper, err2 := excludeLowerAndUpperGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -435,11 +457,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1101
 	if isInLower == 1 && isInUpper == 1 && isInNumber == 0 && isInSpecial == 1 {
-		excludeLowerAndUpperAndSpecialgenerater, err := New(&ExcludeSymbolsLowercaseUppercaseConfig)
+		excludeLowerAndUpperAndSpecialGenerator, err := New(&ExcludeSymbolsLowercaseUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndUpperAndSpecial, err2 := excludeLowerAndUpperAndSpecialgenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndUpperAndSpecial, err2 := excludeLowerAndUpperAndSpecialGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -447,11 +469,11 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	}
 	//1110
 	if isInLower == 1 && isInUpper == 1 && isInNumber == 1 && isInSpecial == 0 {
-		excludeLowerAndUpperAndNumbergenerater, err := New(&ExcludeNumbersLowercaseUppercaseConfig)
+		excludeLowerAndUpperAndNumberGenerator, err := New(&ExcludeNumbersLowercaseUppercaseConfig)
 		if err != nil {
 			panic(err)
 		}
-		passwordByExcludeLowerAndUpperAndNumber, err2 := excludeLowerAndUpperAndNumbergenerater.GenerateWithWeek(sliderValue)
+		passwordByExcludeLowerAndUpperAndNumber, err2 := excludeLowerAndUpperAndNumberGenerator.GenerateWithWeek(sliderValue)
 		if err2 != nil {
 			panic(err2)
 		}
@@ -461,15 +483,15 @@ func generatePassword(isInLower, isInUpper, isInNumber, isInSpecial, sliderValue
 	if isInLower == 1 && isInUpper == 1 && isInNumber == 1 && isInSpecial == 1 {
 		return "密码规则过于简单"
 	}
-	defaultGenerater, err := New(&DefaultConfig)
+	defaultGenerator, err := New(&DefaultConfig)
 	if err != nil {
 		panic(err)
 	}
-	passwordByDefaultGenerater, generr := defaultGenerater.GenerateWithWeek(sliderValue)
-	if generr != nil {
-		panic(generr)
+	passwordByDefaultGenerator, generErro := defaultGenerator.GenerateWithWeek(sliderValue)
+	if generErro != nil {
+		panic(generErro)
 	}
-	return passwordByDefaultGenerater
+	return passwordByDefaultGenerator
 }
 
 func encipherByRSA(str string) []byte {
@@ -518,20 +540,14 @@ func GetValueFromDB(website, username string) string {
 
 // 默认配置常量
 const (
-	LengthWeak                int = 6
-	LengthOK                  int = 12
-	LengthStrong              int = 24
-	LengthVeryStrong          int = 36
-	DefaultLetterSet              = "abcdefghijklmnopqrstuvwxyz"
-	DefaultNumberSet              = "0123456789"
-	DefaultSymbolSet              = "!$%^&*()_+{}:@[];'#<>?,./|\\-=?"
-	DefaultLetterAmbiguousSet     = "ijlo"
-	DefaultSymbolAmbiguousSet     = "<>[](){}:;'/|\\,"
-	DefaultNumberAmbiguousSet     = "01"
+	LengthStrong     int = 24
+	DefaultLetterSet     = "abcdefghijklmnopqrstuvwxyz"
+	DefaultNumberSet     = "0123456789"
+	DefaultSymbolSet     = "!$%^&*()_+{}:@[];'#<>?,./|\\-=?"
 )
 
 var (
-	// 默认配置 全true配置
+	// DefaultConfig 默认配置 全true配置
 	//0000
 	DefaultConfig = Config{
 		Length:                     LengthStrong,
@@ -542,7 +558,7 @@ var (
 		ExcludeSimilarCharacters:   true, //排除相似字符
 		ExcludeAmbiguousCharacters: true, //排除连续的字符
 	}
-	//0001
+	// ExcludeSymbolsConfig 0001
 	ExcludeSymbolsConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -552,7 +568,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0001
+	// ExcludeUppercaseConfig 0001
 	ExcludeUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -562,7 +578,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0010
+	// ExcludeLowercaseConfig 0010
 	ExcludeLowercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -572,7 +588,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0011
+	// ExcludeLowercaseUppercaseConfig 0011
 	ExcludeLowercaseUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -582,7 +598,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0100
+	// ExcludeNumbersConfig 0100
 	ExcludeNumbersConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -592,7 +608,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0101
+	// ExcludeNumbersUppercaseConfig 0101
 	ExcludeNumbersUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -602,7 +618,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0110
+	// ExcludeNumbersLowercaseConfig 0110
 	ExcludeNumbersLowercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -612,7 +628,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//0111
+	// ExcludeNumbersLowercaseUppercaseConfig 0111
 	ExcludeNumbersLowercaseUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             true,  //包含特殊符号
@@ -622,7 +638,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1001
+	// ExcludeSymbolsUppercaseConfig 1001
 	ExcludeSymbolsUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -632,7 +648,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1010
+	// ExcludeSymbolsLowercaseConfig 1010
 	ExcludeSymbolsLowercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -642,7 +658,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1011
+	// ExcludeSymbolsLowercaseUppercaseConfig 1011
 	ExcludeSymbolsLowercaseUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -652,7 +668,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1100
+	// ExcludeSymbolsNumbersConfig 1100
 	ExcludeSymbolsNumbersConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -662,7 +678,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1101
+	// ExcludeSymbolsNumbersUppercaseConfig 1101
 	ExcludeSymbolsNumbersUppercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -672,7 +688,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1110
+	// ExcludeSymbolsNumbersLowercaseConfig 1110
 	ExcludeSymbolsNumbersLowercaseConfig = Config{
 		Length:                     LengthStrong,
 		IncludeSymbols:             false, //包含特殊符号
@@ -682,16 +698,7 @@ var (
 		ExcludeSimilarCharacters:   true,  //排除相似字符
 		ExcludeAmbiguousCharacters: true,  //排除连续的字符
 	}
-	//1111
-	ExcludeSymbolsNumbersLowercaseUppercaseConfig = Config{
-		Length:                     LengthStrong,
-		IncludeSymbols:             false, //包含特殊符号
-		IncludeNumbers:             false, //包含小写字母
-		IncludeLowercaseLetters:    false, //包含小写字母
-		IncludeUppercaseLetters:    false, //包含大写字母
-		ExcludeSimilarCharacters:   true,  //排除相似字符
-		ExcludeAmbiguousCharacters: true,  //排除连续的字符
-	}
+
 	ErrConfigIsEmpty = errors.New("config is empty")
 )
 
@@ -710,7 +717,7 @@ type Config struct {
 	ExcludeAmbiguousCharacters bool
 }
 
-// New一个密码生成器
+// New 一个密码生成器
 func New(config *Config) (*Generator, error) {
 	if config == nil {
 		config = &DefaultConfig
@@ -747,32 +754,19 @@ func buildCharacterSet(config *Config) string {
 	}
 	if config.IncludeSymbols {
 		characterSet += DefaultSymbolSet
-		// if config.ExcludeAmbiguousCharacters {
-		// 	characterSet = removeCharacters(characterSet, DefaultSymbolAmbiguousSet)
-		// }
 	}
 	return characterSet
 }
-
-// func removeCharacters(str, characters string) string {
-// 	return strings.Map(func(r rune) rune {
-// 		if !strings.ContainsRune(characters, r) {
-// 			return r
-// 		}
-// 		return -1
-// 	}, str)
-// }
 
 func NewWithDefault() (*Generator, error) {
 	return New(&DefaultConfig)
 }
 
-// 生成一个密码
+// Generate 生成一个密码
 func (g Generator) Generate() (*string, error) {
 	var generated string
 	characterSet := strings.Split(g.Config.CharacterSet, "")
 	max := big.NewInt(int64(len(characterSet)))
-
 	for i := 0; i < g.Config.Length; i++ {
 		val, err := rand.Int(rand.Reader, max)
 		if err != nil {
@@ -783,7 +777,7 @@ func (g Generator) Generate() (*string, error) {
 	return &generated, nil
 }
 
-// 一次性生成多个密码
+// GenerateMany 一次性生成多个密码
 func (g Generator) GenerateMany(amount int) ([]string, error) {
 	var generated []string
 	for i := 0; i < amount; i++ {
@@ -796,10 +790,11 @@ func (g Generator) GenerateMany(amount int) ([]string, error) {
 	return generated, nil
 }
 
-// 生成一个指定长度的密码
+// GenerateWithLength 生成一个指定长度的密码
 func (g Generator) GenerateWithLength(length int) (*string, error) {
 	var generated string
 	characterSet := strings.Split(g.Config.CharacterSet, "")
+	fmt.Println(characterSet)
 	max := big.NewInt(int64(len(characterSet)))
 	for i := 0; i < length; i++ {
 		val, err := rand.Int(rand.Reader, max)
@@ -811,7 +806,7 @@ func (g Generator) GenerateWithLength(length int) (*string, error) {
 	return &generated, nil
 }
 
-// 一次性生成多个指定长度的密码
+// GenerateManyWithLength 一次性生成多个指定长度的密码
 func (g Generator) GenerateManyWithLength(amount, length int) ([]string, error) {
 	var generated []string
 	for i := 0; i < amount; i++ {
@@ -824,7 +819,7 @@ func (g Generator) GenerateManyWithLength(amount, length int) ([]string, error) 
 	return generated, nil
 }
 
-// 一次性生成7个密码,然后根据星期几来从生成的密码中挑选一个
+// GenerateWithWeek 一次性生成7个密码,然后根据星期几来从生成的密码中挑选一个
 func (g Generator) GenerateWithWeek(length int) (string, error) {
 	amount := 7
 	week := time.Now().Weekday()
@@ -835,7 +830,7 @@ func (g Generator) GenerateWithWeek(length int) (string, error) {
 	return generatPassByWeek[week], nil
 }
 
-// 判断所给路径文件/文件夹是否存在
+// PathExists 判断所给路径文件/文件夹是否存在
 func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -849,14 +844,9 @@ func PathExists(path string) (bool, error) {
 
 // ******************************************RSAFile********************************************
 func GenerateKeyFile(bits int) error {
-	//判断公私钥文件是否存在
-	err := os.Mkdir("./myRSA", os.ModePerm)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	existPublic, _ := PathExists("public.pem")
-	existPrivate, _ := PathExists("private.pem")
+
+	existPublic, _ := PathExists("publicKey.pem")
+	existPrivate, _ := PathExists("privateKey.pem")
 	if existPublic && existPrivate {
 		return errors.New("公私钥文件已存在")
 	}
@@ -881,7 +871,12 @@ func GenerateKeyFile(bits int) error {
 	if err != nil {
 		return err
 	}
-	defer privateFile.Close()
+	defer func(privateFile *os.File) {
+		err := privateFile.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(privateFile)
 	err = pem.Encode(privateFile, &privateBlock)
 	if err != nil {
 		return err
@@ -908,16 +903,20 @@ func GenerateKeyFile(bits int) error {
 	if err != nil {
 		return err
 	}
-	defer publicFile.Close()
+	defer func(publicFile *os.File) {
+		err := publicFile.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(publicFile)
 	err = pem.Encode(publicFile, &publicBlock)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// 公钥加密
+// LockWithPublicKey 公钥加密
 func LockWithPublicKey(src []byte, pubKeyFile string) ([]byte, error) {
 	var err error
 	//将公钥文件中的公钥读出，得到使用pem编码的字符串
@@ -925,7 +924,12 @@ func LockWithPublicKey(src []byte, pubKeyFile string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(file)
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -958,14 +962,19 @@ func LockWithPublicKey(src []byte, pubKeyFile string) ([]byte, error) {
 	return encryptBytes, nil
 }
 
-// 私钥解密
+// UnlockWithPrivateKey 私钥解密
 func UnlockWithPrivateKey(src []byte, privateKeyFile string) ([]byte, error) {
 	//将私钥文件中的私钥读出，得到使用pem编码的字符串
 	file, err := os.Open(privateKeyFile)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(file)
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -989,7 +998,7 @@ func UnlockWithPrivateKey(src []byte, privateKeyFile string) ([]byte, error) {
 	//使用得到的私钥通过rsa进行数据解密
 	decryptBytes, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, src)
 	if err != nil {
-		log.Fatal("私钥解密失败", err)
+		fmt.Println("私钥解密失败", err)
 		panic(err)
 	}
 	return decryptBytes, nil
@@ -998,7 +1007,7 @@ func UnlockWithPrivateKey(src []byte, privateKeyFile string) ([]byte, error) {
 //********************************************************************************
 //leveldb的key和value都是byte数组类型
 
-// 根据key获取value
+// GetValueByKey 根据key获取value
 func GetValueByKey(key string) (string, bool) {
 	data, err := DB.Get([]byte(key), nil)
 	if err == leveldb.ErrNotFound {
@@ -1008,13 +1017,13 @@ func GetValueByKey(key string) (string, bool) {
 	return string(data), true
 }
 
-// 设置key和value
+// SetKeyAndValue 设置key和value
 func SetKeyAndValue(key string, value []byte) bool {
 	err := DB.Put([]byte(key), value, nil)
 	return err == nil
 }
 
-// 根据key删除key value
+// DelKeyAndValue 根据key删除key value
 func DelKeyAndValue(key string) bool {
 	_, err := DB.Get([]byte(key), nil)
 	if err == leveldb.ErrNotFound {
